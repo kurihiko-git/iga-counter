@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>いが栗カウンターver1.0 - Webカメラ＆保存ボタン対応</title>
+  <title>いが栗カウンターver2.0 - webカメラ手動検出ボタン。API呼出しカウンター</title>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
     #authOverlay {
@@ -39,15 +39,15 @@
     <button onclick="checkPIN()">開く</button>
     <div id="authError" style="color: red; margin-top: 10px;"></div>
   </div>
-  <h1>いが栗カウンターver1.0（Webカメラ・保存ボタン対応）</h1>
+  <h1>いが栗カウンターver2.0 (webカメラ手動検出ボタン。API呼出しカウンター)</h1>
 
 
   <div class="section">
     <h2>✅ 実装済み機能一覧</h2>
     <ul>
       <li>📁 画像アップロード（ローカル画像から検出）</li>
-      <li>📷 Webカメラ対応（3秒ごと自動検出、停止ボタン付き）</li>
-      <li>📊 モデル Version 切替<（Version 10〜1 選択可能）/li>
+      <li>📷 Webカメラ対応（手動検出、停止ボタン付き）</li>
+      <li>📊 モデル Version 切替<（Version 15〜1 選択可能）/li>
       <li>🌺 スライダーで 検出精度 / 重なり度 / □透明度 調整可能</li>
       <li>🖼 検出数・平均サイズ表示</li>
       <li>📀 保存ボタン（JPG画像＋CSV出力）</li>
@@ -58,7 +58,7 @@
     <h2>🗒 操作説明</h2>
     <ol>
       <li>「ファイル選択」で画像をアップロード → 自動検出</li>
-      <li>「Webカメラ起動」でリアルタイム検出（3秒間隔）</li>
+      <li>「Webカメラ起動」でリアルタイム検出</li>
       <li>検出後に「📀 結果を保存」ボタンで画像＋CSVを保存</li>
       <li>各スライダーで検出精度や表示□透明度の調整が可能</li>
       <li>モデルのバージョンはプルダウンで変更可能（自動再検出）</li>
@@ -68,7 +68,12 @@
   <div class="controls">
     <label>モデル Version:
       <select id="versionSelect">
-        <option value="10">10（最新版）</option>
+        <option value="15">15</option>
+        <option value="14">14</option>
+        <option value="13">13</option>
+        <option value="12">12（最新版）</option>
+        <option value="11">11</option>
+        <option value="10">10</option>
         <option value="9">9</option>
         <option value="8">8</option>
         <option value="7">7</option>
@@ -88,6 +93,8 @@
     </label>
     <input type="file" accept="image/*" id="upload" />
     <button id="cameraBtn">📷 Webカメラ起動</button>
+    <button id="detectOnceBtn">📷 1回だけ検出</button>
+<div>API呼び出し回数：<span id="apiCount">0</span> 回</div>
     <button id="stopCameraBtn">🔴 Webカメラ停止</button>
     <button id="saveBtn">📀 結果を保存</button>
   </div>
@@ -120,8 +127,8 @@
         document.getElementById("authError").textContent = "PINが間違っています";
       }
     }
-    const MODEL_ID = "iga-counter-j5otj";
-    const API_KEY = "K4ZyTpkDTooa8A1ocuqh";
+    const MODEL_ID = "iga-counter";
+    const API_KEY = "b4MuiFw31AaascF4hugH";
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -141,6 +148,7 @@
 
     let currentImage = null;
     let lastPredictions = [];
+    let apiCallCount = 0;
     let cameraStream = null;
     let cameraInterval = null;
 
@@ -209,13 +217,28 @@
       if (cameraInterval) clearInterval(cameraInterval);
     });
 
+    document.getElementById("detectOnceBtn").addEventListener("click", () => {
+  if (!video.srcObject) {
+    alert("カメラが起動していません");
+    return;
+  }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+  detectImage(canvas);
+});
+
     saveBtn.addEventListener("click", () => {
       if (lastPredictions.length > 0) {
         downloadCanvasImage();
         downloadCSV(lastPredictions);
       }
     });
+    
 
+    async function detectImage(source) {
+  apiCallCount++;
+  document.getElementById("apiCount").textContent = apiCallCount;
     async function detectImage(source) {
       const confidence = (confidenceSlider.value / 100).toFixed(2);
       const overlap = (overlapSlider.value / 100).toFixed(2);
