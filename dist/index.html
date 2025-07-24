@@ -30,6 +30,27 @@
     @media (max-width: 600px) {
       th, td { font-size: 0.8em; }
     }
+    .control-group {
+  background: #f8f8f8;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 10px auto;
+  max-width: 600px;
+}
+.control-group h3 {
+  margin-top: 0;
+  font-size: 1em;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 4px;
+}
+.control-group button,
+.control-group select,
+.control-group input[type="file"] {
+  display: block;
+  width: 100%;
+  margin: 5px 0;
+}
   </style>
 </head>
 <body>
@@ -66,6 +87,8 @@
   </div>
 
   <div class="controls">
+  <div class="control-group">
+    <h3>📁 入力操作</h3>
     <label>モデル Version:
       <select id="versionSelect">
         <option value="15">15</option>
@@ -92,12 +115,21 @@
       </select>
     </label>
     <input type="file" accept="image/*" id="upload" />
+    </div>
+
+    <div class="control-group">
+    <h3>📷 カメラ操作</h3>
     <button id="cameraBtn">📷 Webカメラ起動</button>
-    <button id="detectOnceBtn">📷 1回だけ検出</button>
-<div>API呼び出し回数：<span id="apiCount">0</span> 回</div>
+    <button id="detectOnceBtn">📸 1回だけ検出</button>
     <button id="stopCameraBtn">🔴 Webカメラ停止</button>
-    <button id="saveBtn">📀 結果を保存</button>
   </div>
+
+  <div class="control-group">
+    <h3>💾 保存＆確認</h3>
+    <button id="saveBtn">📀 結果を保存</button>
+    <div>API呼び出し回数：<span id="apiCount">0</span> 回</div>
+  </div>
+</div>
 
   <div class="sliders">
     <label>検出精度: <span id="confidenceValue">50%</span>
