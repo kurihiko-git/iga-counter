@@ -117,246 +117,224 @@
   <div id="summary"></div>
   <div id="details"></div>
 
-  <script>
-    const PIN_CODE = "2638"; // 任意の4桁PINに変更可能
-    function checkPIN() {
-      const input = document.getElementById("pinInput").value;
-      if (input === PIN_CODE) {
-        document.getElementById("authOverlay").style.display = "none";
-      } else {
-        document.getElementById("authError").textContent = "PINが間違っています";
-      }
+ <script>
+  const PIN_CODE = "2638";
+  document.getElementById("pinInput").addEventListener("keypress", e => {
+    if (e.key === "Enter") checkPIN();
+  });
+
+  function checkPIN() {
+    const input = document.getElementById("pinInput").value;
+    if (input === PIN_CODE) {
+      document.getElementById("authOverlay").style.display = "none";
+    } else {
+      document.getElementById("authError").textContent = "PINが間違っています";
     }
-    const MODEL_ID = "iga-counter";
-    const API_KEY = "b4MuiFw31AaascF4hugH";
-
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const video = document.getElementById("video");
-    const cameraBtn = document.getElementById("cameraBtn");
-    const stopCameraBtn = document.getElementById("stopCameraBtn");
-    const upload = document.getElementById("upload");
-    const saveBtn = document.getElementById("saveBtn");
-    const confidenceSlider = document.getElementById("confidenceSlider");
-    const overlapSlider = document.getElementById("overlapSlider");
-    const opacitySlider = document.getElementById("opacitySlider");
-    const versionSelect = document.getElementById("versionSelect");
-    const countDisplay = document.getElementById("count");
-    const summaryDisplay = document.getElementById("summary");
-    const detailsDisplay = document.getElementById("details");
-    const cameraFacing = document.getElementById("cameraFacing");
-
-    let currentImage = null;
-    let lastPredictions = [];
-    let apiCallCount = 0;
-    let cameraStream = null;
-    let cameraInterval = null;
-let apiCallCount = parseInt(sessionStorage.getItem("apiCallCount") || "0");
-document.getElementById("apiCount").textContent = apiCallCount;
-
-// 関数内でAPIを呼び出したら必ず以下も実行
-apiCallCount++;
-sessionStorage.setItem("apiCallCount", apiCallCount);
-document.getElementById("apiCount").textContent = apiCallCount;
-    function updateSliderDisplay() {
-      document.getElementById("confidenceValue").textContent = `${confidenceSlider.value}%`;
-      document.getElementById("overlapValue").textContent = `${overlapSlider.value}%`;
-      document.getElementById("opacityValue").textContent = `${opacitySlider.value}%`;
-    }
-
-    confidenceSlider.oninput = () => {
-      updateSliderDisplay();
-      if (currentImage) detectImage(currentImage);
-    };
-    overlapSlider.oninput = () => {
-      updateSliderDisplay();
-      if (currentImage) detectImage(currentImage);
-    };
-    opacitySlider.oninput = updateSliderDisplay;
-    versionSelect.onchange = () => {
-      if (currentImage) detectImage(currentImage);
-    };
-
-    upload.addEventListener("change", e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        currentImage = img;
-        detectImage(img);
-      };
-      img.src = URL.createObjectURL(file);
-    });
-
-      cameraBtn.addEventListener("click", async () => {
-      try {
-        const facingMode = cameraFacing.value;
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } } });
-        video.srcObject = cameraStream;
-        video.style.display = "block";
-        cameraInterval = setInterval(() => {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0);
-          detectImage(canvas);
-        }, 3000);
-      } catch (err) {
-        alert("カメラの起動に失敗しました: " + err);
-      }
-    });
-
-    stopCameraBtn.addEventListener("click", () => {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        video.style.display = "none";
-      }
-      if (cameraInterval) clearInterval(cameraInterval);
-    });
-
-    document.getElementById("detectOnceBtn").addEventListener("click", () => {
-  if (!video.srcObject) {
-    alert("カメラが起動していません");
-    return;
   }
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ctx.drawImage(video, 0, 0);
-  detectImage(canvas);
-});
 
-    saveBtn.addEventListener("click", () => {
-      if (lastPredictions.length > 0) {
-        downloadCanvasImage();
-        downloadCSV(lastPredictions);
-      }
-    });
-    
+  const MODEL_ID = "iga-counter";
+  const API_KEY = "b4MuiFw31AaascF4hugH";
 
-async function detectImage(source) {
-  apiCallCount++;
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const video = document.getElementById("video");
+  const cameraBtn = document.getElementById("cameraBtn");
+  const stopCameraBtn = document.getElementById("stopCameraBtn");
+  const upload = document.getElementById("upload");
+  const saveBtn = document.getElementById("saveBtn");
+  const confidenceSlider = document.getElementById("confidenceSlider");
+  const overlapSlider = document.getElementById("overlapSlider");
+  const opacitySlider = document.getElementById("opacitySlider");
+  const versionSelect = document.getElementById("versionSelect");
+  const countDisplay = document.getElementById("count");
+  const summaryDisplay = document.getElementById("summary");
+  const detailsDisplay = document.getElementById("details");
+  const cameraFacing = document.getElementById("cameraFacing");
+  const detectOnceBtn = document.getElementById("detectOnceBtn");
+
+  let currentImage = null;
+  let lastPredictions = [];
+  let apiCallCount = parseInt(sessionStorage.getItem("apiCallCount") || "0");
+  let cameraStream = null;
+  let cameraInterval = null;
   document.getElementById("apiCount").textContent = apiCallCount;
 
-  const confidence = (confidenceSlider.value / 100).toFixed(2);
-  const overlap = (overlapSlider.value / 100).toFixed(2);
-  const opacity = opacitySlider.value / 100;
-  const version = versionSelect.value;
-
-  ctx.drawImage(source, 0, 0);
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.9));
-  const formData = new FormData();
-  formData.append("file", blob, "image.jpg");
-
-  countDisplay.textContent = "検出中…";
-  summaryDisplay.textContent = "";
-  detailsDisplay.innerHTML = "";
-
-  try {
-    const res = await fetch(`https://detect.roboflow.com/${MODEL_ID}/${version}?api_key=${API_KEY}&confidence=${confidence}&overlap=${overlap}`, {
-      method: "POST",
-      body: formData
-    });
-    const result = await res.json();
-    const predictions = result.predictions || [];
-    lastPredictions = predictions;
-
-    countDisplay.textContent = `検出数：${predictions.length}個`;
-    if (!predictions.length) return;
-
-    let totalW = 0, totalH = 0;
-    let table = "<table><tr><th>#</th><th>クラス</th><th>信頼度</th><th>幅</th><th>高さ</th></tr>";
-    predictions.forEach((pred, i) => {
-      totalW += pred.width;
-      totalH += pred.height;
-      ctx.strokeStyle = "lime";
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = opacity;
-      ctx.strokeRect(pred.x - pred.width / 2, pred.y - pred.height / 2, pred.width, pred.height);
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = "lime";
-      ctx.font = "14px sans-serif";
-      ctx.fillText(`${pred.class} (${(pred.confidence * 100).toFixed(1)}%)`, pred.x - pred.width / 2, pred.y - pred.height / 2 - 5);
-
-      table += `<tr><td>${i + 1}</td><td>${pred.class}</td><td>${(pred.confidence * 100).toFixed(1)}%</td><td>${pred.width.toFixed(1)}</td><td>${pred.height.toFixed(1)}</td></tr>`;
-    });
-    table += "</table>";
-    detailsDisplay.innerHTML = table;
-    summaryDisplay.textContent = `平均サイズ：幅 ${(totalW / predictions.length).toFixed(1)}px × 高さ ${(totalH / predictions.length).toFixed(1)}px`;
-
-  } catch (err) {
-    countDisplay.textContent = "検出失敗: " + err.message;
+  function updateSliderDisplay() {
+    document.getElementById("confidenceValue").textContent = `${confidenceSlider.value}%`;
+    document.getElementById("overlapValue").textContent = `${overlapSlider.value}%`;
+    document.getElementById("opacityValue").textContent = `${opacitySlider.value}%`;
   }
-}
 
-    function downloadCanvasImage() {
-      const timestamp = new Date().toISOString().replace(/[:T]/g, "-").split(".")[0];
-      const link = document.createElement("a");
-      link.download = `detection_result_${timestamp}.jpg`;
-      link.href = canvas.toDataURL("image/jpeg");
-      link.click();
+  confidenceSlider.oninput = () => {
+    updateSliderDisplay();
+    if (currentImage) detectImage(currentImage);
+  };
+  overlapSlider.oninput = () => {
+    updateSliderDisplay();
+    if (currentImage) detectImage(currentImage);
+  };
+  opacitySlider.oninput = updateSliderDisplay;
+  versionSelect.onchange = () => {
+    if (currentImage) detectImage(currentImage);
+  };
+
+  upload.addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    originalFileName = file.name;
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      currentImage = img;
+      detectImage(img);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+
+  cameraBtn.addEventListener("click", async () => {
+    try {
+      const facingMode = cameraFacing.value;
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } } });
+      video.srcObject = cameraStream;
+      video.style.display = "block";
+    } catch (err) {
+      alert("カメラの起動に失敗しました: " + err);
     }
+  });
 
-    let originalFileName = "(カメラ画像)"; // デフォルトのファイル名
+  detectOnceBtn.addEventListener("click", () => {
+    if (!video.srcObject) {
+      alert("カメラが起動していません");
+      return;
+    }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    detectImage(canvas);
+  });
 
-    // ファイル選択時にファイル名を記録
-    upload.addEventListener("change", e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      originalFileName = file.name; // 元のファイル名を記録
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        currentImage = img;
-        detectImage(img);
-      };
-      img.src = URL.createObjectURL(file);
+  stopCameraBtn.addEventListener("click", () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      video.style.display = "none";
+    }
+    if (cameraInterval) clearInterval(cameraInterval);
+  });
+
+  saveBtn.addEventListener("click", () => {
+    if (lastPredictions.length > 0) {
+      downloadCanvasImage();
+      downloadCSV(lastPredictions);
+    }
+  });
+
+  async function detectImage(source) {
+    apiCallCount++;
+    sessionStorage.setItem("apiCallCount", apiCallCount);
+    document.getElementById("apiCount").textContent = apiCallCount;
+
+    const confidence = (confidenceSlider.value / 100).toFixed(2);
+    const overlap = (overlapSlider.value / 100).toFixed(2);
+    const opacity = opacitySlider.value / 100;
+    const version = versionSelect.value;
+
+    ctx.drawImage(source, 0, 0);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.9));
+    const formData = new FormData();
+    formData.append("file", blob, "image.jpg");
+
+    countDisplay.textContent = "検出中…";
+    summaryDisplay.textContent = "";
+    detailsDisplay.innerHTML = "";
+
+    try {
+      const res = await fetch(`https://detect.roboflow.com/${MODEL_ID}/${version}?api_key=${API_KEY}&confidence=${confidence}&overlap=${overlap}`, {
+        method: "POST",
+        body: formData
+      });
+      const result = await res.json();
+      const predictions = result.predictions || [];
+      lastPredictions = predictions;
+
+      countDisplay.textContent = `検出数：${predictions.length}個`;
+      if (!predictions.length) return;
+
+      let totalW = 0, totalH = 0;
+      let table = "<table><tr><th>#</th><th>クラス</th><th>信頼度</th><th>幅</th><th>高さ</th></tr>";
+      predictions.forEach((pred, i) => {
+        totalW += pred.width;
+        totalH += pred.height;
+        ctx.strokeStyle = "lime";
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = opacity;
+        ctx.strokeRect(pred.x - pred.width / 2, pred.y - pred.height / 2, pred.width, pred.height);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "lime";
+        ctx.font = "14px sans-serif";
+        ctx.fillText(`${pred.class} (${(pred.confidence * 100).toFixed(1)}%)`, pred.x - pred.width / 2, pred.y - pred.height / 2 - 5);
+
+        table += `<tr><td>${i + 1}</td><td>${pred.class}</td><td>${(pred.confidence * 100).toFixed(1)}%</td><td>${pred.width.toFixed(1)}</td><td>${pred.height.toFixed(1)}</td></tr>`;
+      });
+      table += "</table>";
+      detailsDisplay.innerHTML = table;
+      summaryDisplay.textContent = `平均サイズ：幅 ${(totalW / predictions.length).toFixed(1)}px × 高さ ${(totalH / predictions.length).toFixed(1)}px`;
+
+    } catch (err) {
+      countDisplay.textContent = "検出失敗: " + err.message;
+    }
+  }
+
+  function downloadCanvasImage() {
+    const timestamp = new Date().toISOString().replace(/[:T]/g, "-").split(".")[0];
+    const link = document.createElement("a");
+    link.download = `detection_result_${timestamp}.jpg`;
+    link.href = canvas.toDataURL("image/jpeg");
+    link.click();
+  }
+
+  let originalFileName = "(カメラ画像)";
+
+  function downloadCSV(predictions) {
+    const timestamp = new Date().toISOString().replace(/[:T]/g, "-").split(".")[0];
+    const version = versionSelect.value;
+    const confidence = `${confidenceSlider.value}%`;
+    const overlap = `${overlapSlider.value}%`;
+    const opacity = `${opacitySlider.value}%`;
+
+    const rows = [
+      ["作成日時", timestamp],
+      ["元のファイル名", originalFileName],
+      ["モデル Version", version],
+      ["検出精度", confidence],
+      ["重なり度", overlap],
+      ["□透明度", opacity],
+      ["検出個数", predictions.length],
+      [],
+      ["#", "クラス", "検出精度", "幅", "高さ"]
+    ];
+
+    predictions.forEach((p, i) => {
+      rows.push([
+        i + 1,
+        p.class,
+        (p.confidence * 100).toFixed(1),
+        p.width.toFixed(1),
+        p.height.toFixed(1)
+      ]);
     });
 
-    function downloadCSV(predictions) {
-      const timestamp = new Date().toISOString().replace(/[:T]/g, "-").split(".")[0];
-      const version = versionSelect.value;
-      const confidence = `${confidenceSlider.value}%`;
-      const overlap = `${overlapSlider.value}%`;
-      const opacity = `${opacitySlider.value}%`;
+    const csv = rows.map(r => r.join(",")).join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=shift_jis;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `detection_result_${timestamp}.csv`;
+    a.click();
+  }
+</script>
 
-      // メタ情報を先頭に追加（日本語表記 + ファイル名）
-      const rows = [
-        ["作成日時", timestamp],
-        ["元のファイル名", originalFileName],
-        ["モデル Version", version],
-        ["検出精度", confidence],
-        ["重なり度", overlap],
-        ["□透明度", opacity],
-        ["検出個数", predictions.length],
-        [],
-        ["#", "クラス", "検出精度", "幅", "高さ"]
-      ];
-
-      // 検出結果をCSVに追加
-      predictions.forEach((p, i) => {
-        rows.push([
-          i + 1,
-          p.class,
-          (p.confidence * 100).toFixed(1),
-          p.width.toFixed(1),
-          p.height.toFixed(1)
-        ]);
-      });
-
-      // CSV文字列に変換（Shift-JIS + BOM付き）
-      const csv = rows.map(r => r.join(",")).join("\r\n");
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=shift_jis;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `detection_result_${timestamp}.csv`;
-      a.click();
-    }
-  </script>
 </body>
 </html>
 
