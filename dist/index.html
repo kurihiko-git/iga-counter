@@ -108,27 +108,22 @@
         <option value="1">1</option>
       </select>
     </label>
-    <label>カメラ選択:
+    </div>
+
+    <div class="control-group">
+    <h3>📷 カメラ操作</h3>
+      <label>カメラ選択:
       <select id="cameraFacing">
         <option value="user">インカメラ</option>
         <option value="environment" selected>アウトカメラ</option>
       </select>
     </label>
     <input type="file" accept="image/*" id="upload" />
-    </div>
-
-    <div class="control-group">
-    <h3>📷 カメラ操作</h3>
     <button id="cameraBtn">📷 Webカメラ起動</button>
-    <button id="detectOnceBtn">📸 1回だけ検出</button>
     <button id="stopCameraBtn">🔴 Webカメラ停止</button>
   </div>
 
-  <div class="control-group">
-    <h3>💾 保存＆確認</h3>
-    <button id="saveBtn">📀 結果を保存</button>
-    <div>API呼び出し回数：<span id="apiCount">0</span> 回</div>
-  </div>
+  
 </div>
 
   <div class="sliders">
@@ -143,8 +138,14 @@
     </label>
   </div>
 
+  <button id="detectOnceBtn">📸 Webカメラ検出</button>
   <div id="count">検出数：0個</div>
   <canvas id="canvas"></canvas>
+  <div class="control-group">
+    <h3>💾 保存＆確認</h3>
+    <button id="saveBtn">📀 結果を保存</button>
+    <div>API呼び出し回数：<span id="apiCount">0</span> 回</div>
+  </div>
   <video id="video" autoplay playsinline></video>
   <div id="summary"></div>
   <div id="details"></div>
