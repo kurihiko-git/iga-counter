@@ -151,7 +151,13 @@
     let apiCallCount = 0;
     let cameraStream = null;
     let cameraInterval = null;
+let apiCallCount = parseInt(sessionStorage.getItem("apiCallCount") || "0");
+document.getElementById("apiCount").textContent = apiCallCount;
 
+// 関数内でAPIを呼び出したら必ず以下も実行
+apiCallCount++;
+sessionStorage.setItem("apiCallCount", apiCallCount);
+document.getElementById("apiCount").textContent = apiCallCount;
     function updateSliderDisplay() {
       document.getElementById("confidenceValue").textContent = `${confidenceSlider.value}%`;
       document.getElementById("overlapValue").textContent = `${overlapSlider.value}%`;
@@ -229,60 +235,60 @@
     });
     
 
-    async function detectImage(source) {
+async function detectImage(source) {
   apiCallCount++;
   document.getElementById("apiCount").textContent = apiCallCount;
-    async function detectImage(source) {
-      const confidence = (confidenceSlider.value / 100).toFixed(2);
-      const overlap = (overlapSlider.value / 100).toFixed(2);
-      const opacity = opacitySlider.value / 100;
-      const version = versionSelect.value;
 
-      ctx.drawImage(source, 0, 0);
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.9));
-      const formData = new FormData();
-      formData.append("file", blob, "image.jpg");
+  const confidence = (confidenceSlider.value / 100).toFixed(2);
+  const overlap = (overlapSlider.value / 100).toFixed(2);
+  const opacity = opacitySlider.value / 100;
+  const version = versionSelect.value;
 
-      countDisplay.textContent = "検出中…";
-      summaryDisplay.textContent = "";
-      detailsDisplay.innerHTML = "";
+  ctx.drawImage(source, 0, 0);
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.9));
+  const formData = new FormData();
+  formData.append("file", blob, "image.jpg");
 
-      try {
-        const res = await fetch(`https://detect.roboflow.com/${MODEL_ID}/${version}?api_key=${API_KEY}&confidence=${confidence}&overlap=${overlap}`, {
-          method: "POST",
-          body: formData
-        });
-        const result = await res.json();
-        const predictions = result.predictions || [];
-        lastPredictions = predictions;
+  countDisplay.textContent = "検出中…";
+  summaryDisplay.textContent = "";
+  detailsDisplay.innerHTML = "";
 
-        countDisplay.textContent = `検出数：${predictions.length}個`;
-        if (!predictions.length) return;
+  try {
+    const res = await fetch(`https://detect.roboflow.com/${MODEL_ID}/${version}?api_key=${API_KEY}&confidence=${confidence}&overlap=${overlap}`, {
+      method: "POST",
+      body: formData
+    });
+    const result = await res.json();
+    const predictions = result.predictions || [];
+    lastPredictions = predictions;
 
-        let totalW = 0, totalH = 0;
-        let table = "<table><tr><th>#</th><th>クラス</th><th>信頼度</th><th>幅</th><th>高さ</th></tr>";
-        predictions.forEach((pred, i) => {
-          totalW += pred.width;
-          totalH += pred.height;
-          ctx.strokeStyle = "lime";
-          ctx.lineWidth = 2;
-          ctx.globalAlpha = opacity;
-          ctx.strokeRect(pred.x - pred.width / 2, pred.y - pred.height / 2, pred.width, pred.height);
-          ctx.globalAlpha = 1;
-          ctx.fillStyle = "lime";
-          ctx.font = "14px sans-serif";
-          ctx.fillText(`${pred.class} (${(pred.confidence * 100).toFixed(1)}%)`, pred.x - pred.width / 2, pred.y - pred.height / 2 - 5);
+    countDisplay.textContent = `検出数：${predictions.length}個`;
+    if (!predictions.length) return;
 
-          table += `<tr><td>${i + 1}</td><td>${pred.class}</td><td>${(pred.confidence * 100).toFixed(1)}%</td><td>${pred.width.toFixed(1)}</td><td>${pred.height.toFixed(1)}</td></tr>`;
-        });
-        table += "</table>";
-        detailsDisplay.innerHTML = table;
-        summaryDisplay.textContent = `平均サイズ：幅 ${(totalW / predictions.length).toFixed(1)}px × 高さ ${(totalH / predictions.length).toFixed(1)}px`;
+    let totalW = 0, totalH = 0;
+    let table = "<table><tr><th>#</th><th>クラス</th><th>信頼度</th><th>幅</th><th>高さ</th></tr>";
+    predictions.forEach((pred, i) => {
+      totalW += pred.width;
+      totalH += pred.height;
+      ctx.strokeStyle = "lime";
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = opacity;
+      ctx.strokeRect(pred.x - pred.width / 2, pred.y - pred.height / 2, pred.width, pred.height);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "lime";
+      ctx.font = "14px sans-serif";
+      ctx.fillText(`${pred.class} (${(pred.confidence * 100).toFixed(1)}%)`, pred.x - pred.width / 2, pred.y - pred.height / 2 - 5);
 
-      } catch (err) {
-        countDisplay.textContent = "検出失敗: " + err.message;
-      }
-    }
+      table += `<tr><td>${i + 1}</td><td>${pred.class}</td><td>${(pred.confidence * 100).toFixed(1)}%</td><td>${pred.width.toFixed(1)}</td><td>${pred.height.toFixed(1)}</td></tr>`;
+    });
+    table += "</table>";
+    detailsDisplay.innerHTML = table;
+    summaryDisplay.textContent = `平均サイズ：幅 ${(totalW / predictions.length).toFixed(1)}px × 高さ ${(totalH / predictions.length).toFixed(1)}px`;
+
+  } catch (err) {
+    countDisplay.textContent = "検出失敗: " + err.message;
+  }
+}
 
     function downloadCanvasImage() {
       const timestamp = new Date().toISOString().replace(/[:T]/g, "-").split(".")[0];
